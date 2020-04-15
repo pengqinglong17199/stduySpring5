@@ -10,7 +10,7 @@
         <servlet-class>com.pql.mvcframework.v1.servlet.PQLDispatcherServlet</servlet-class>
         <init-param>
             <param-name>contextConfigLocation</param-name>
-            <param-value>src/main/resources/application.yml</param-value>
+            <param-value>application.yml</param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>

@@ -16,10 +16,7 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * 核心 DispatcherServlet
@@ -27,10 +24,10 @@ import java.util.Properties;
 public class PQLDispatcherServlet extends HttpServlet {
 
     private Map<String, Object> mapping = new HashMap<String, Object>();
-
+    private List<String> classNames = new ArrayList<String>();
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        this.doGet(req, resp);
+        super.doGet(req, resp);
     }
 
     @Override
@@ -40,6 +37,7 @@ public class PQLDispatcherServlet extends HttpServlet {
             doDispatch(req, resp);
         }catch (Exception e){
             // 报错返回 500
+            e.printStackTrace();
             resp.getWriter().write("500 Exception " + Arrays.toString(e.getStackTrace()));
         }
     }
@@ -50,17 +48,18 @@ public class PQLDispatcherServlet extends HttpServlet {
     private void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception{
         String requestURL = request.getRequestURI();
         String contextPath = request.getContextPath();
-        requestURL.replace(contextPath, "").replaceAll("/+","");
+        requestURL = requestURL.replace(contextPath, "").replaceAll("/+", "/");
         // 如果url不存在在映射中  说明404
         if(!this.mapping.containsKey(requestURL)){
             response.getWriter().write("404 not Found!");
+            return;
         }
 
         // 通过反射对controller方法进行调用
         Method method = (Method) this.mapping.get(requestURL);
         Map<String, String[]> parameterMap = request.getParameterMap();
         Object obj = this.mapping.get(method.getDeclaringClass().getName());
-        Object[] params = {request, request, parameterMap.get("name")[0]};// 第一版简单写 暂时写死
+        Object[] params = {request, response, parameterMap.get("name")[0]};// 第一版简单写 暂时写死
         method.invoke(obj, params);
     }
 
@@ -78,7 +77,7 @@ public class PQLDispatcherServlet extends HttpServlet {
             doScanner(scanPackage);
 
             // 控制反转 取得实例
-            for (String className : mapping.keySet()) {
+            for (String className : classNames) {
                 if(!className.contains(".")){
                     continue;
                 }
@@ -102,7 +101,7 @@ public class PQLDispatcherServlet extends HttpServlet {
                         }
                         // 映射url到具体方法
                         PQLRequestMapping requestMapping = method.getAnnotation(PQLRequestMapping.class);
-                        String url = (baseUrl + "/" + requestMapping.value()).replace("/+","/");
+                        String url = (baseUrl + "/" + requestMapping.value()).replaceAll("/+","/");
                         mapping.put(url, method);
                         System.out.println("Mapped " + url + "," + method);
                     }
@@ -166,7 +165,7 @@ public class PQLDispatcherServlet extends HttpServlet {
             }
 
         }catch (Exception e){
-
+            e.printStackTrace();
         }finally {
             if(is != null){
                 try{
@@ -183,6 +182,7 @@ public class PQLDispatcherServlet extends HttpServlet {
      * 扫描bean
      */
     private void doScanner(String packageName){
+
         // 获得包地址
         URL url = this.getClass().getClassLoader().getResource("/" + packageName.replaceAll("\\.", "/"));
         File classDir = new File(url.getFile());
@@ -196,7 +196,7 @@ public class PQLDispatcherServlet extends HttpServlet {
                     continue;
                 }
                 String clazzName = (packageName + "." + file.getName().replace(".class", ""));
-                mapping.put(clazzName, null);
+                classNames.add(clazzName);
             }
         }
     }
