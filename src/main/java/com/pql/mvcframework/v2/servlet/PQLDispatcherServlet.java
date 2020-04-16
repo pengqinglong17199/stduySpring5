@@ -1,9 +1,6 @@
 package com.pql.mvcframework.v2.servlet;
 
-import com.pql.mvcframework.annotation.PQLAutowired;
-import com.pql.mvcframework.annotation.PQLController;
-import com.pql.mvcframework.annotation.PQLRequestMapping;
-import com.pql.mvcframework.annotation.PQLService;
+import com.pql.mvcframework.annotation.*;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -13,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -75,10 +73,49 @@ public class PQLDispatcherServlet extends HttpServlet {
 
         // 通过反射对controller方法进行调用
         Method method = (Method) this.handlerMapping.get(requestURL);
+        // 获取方法的形参列表
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        // 获取请求的参数列表
         Map<String, String[]> parameterMap = request.getParameterMap();
+        // 实际存放的参数value列表
+        Object[] parameterValues = new Object[parameterTypes.length];
+
+        // 遍历方法形参
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Class<?> parameterType = parameterTypes[i];
+
+            // 形参 = request 直接赋值
+            if(parameterType == HttpServletRequest.class){
+                parameterValues[i] = request;
+                continue;
+
+                // 形参 = response 直接赋值
+            }else if(parameterType == HttpServletResponse.class){
+                parameterValues[i] = response;
+                continue;
+
+                // 简单写 只考虑string
+            }else if(parameterType == String.class){
+
+                // 获取方法所形的注解 二维数组
+                Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+                for (int j = 0; j < parameterAnnotations.length; j++) {
+                    for (Annotation annotation : parameterAnnotations[j]) {
+                        if(annotation instanceof PQLRequestParam){
+                            String paramName = ((PQLRequestParam) annotation).value();
+                            if(!"".equals(paramName.trim())){
+                                String value = Arrays.toString(parameterMap.get(paramName))
+                                        .replaceAll("\\[|\\]", "")
+                                        .replaceAll("\\s",",");
+                                parameterValues[i] = value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Object bean = this.ioc.get(toLowerFirstCase(method.getDeclaringClass().getSimpleName()));
-        Object[] params = {request, response, parameterMap.get("name")[0]};// 第二版简单写 暂时写死
-        method.invoke(bean, params);
+        method.invoke(bean, parameterValues);
     }
 
     @Override
