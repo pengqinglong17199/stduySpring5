@@ -27,7 +27,7 @@ public class PQLDispatcherServlet extends HttpServlet {
     private List<String> classNames = new ArrayList<String>();
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+        this.doPost(req, resp);
     }
 
     @Override
