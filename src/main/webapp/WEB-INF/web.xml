@@ -7,7 +7,7 @@
 
     <servlet>
         <servlet-name>pqlmvc</servlet-name>
-        <servlet-class>com.pql.mvcframework.v1.servlet.PQLDispatcherServlet</servlet-class>
+        <servlet-class>com.pql.mvcframework.v2.servlet.PQLDispatcherServlet</servlet-class>
         <init-param>
             <param-name>contextConfigLocation</param-name>
             <param-value>application.yml</param-value>

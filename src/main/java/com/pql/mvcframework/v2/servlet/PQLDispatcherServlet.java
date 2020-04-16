@@ -45,7 +45,7 @@ public class PQLDispatcherServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+        this.doPost(req, resp);
     }
 
     @Override
@@ -68,17 +68,17 @@ public class PQLDispatcherServlet extends HttpServlet {
         String contextPath = request.getContextPath();
         requestURL = requestURL.replace(contextPath, "").replaceAll("/+", "/");
         // 如果url不存在在映射中  说明404
-        if(!this.ioc.containsKey(requestURL)){
+        if(!this.handlerMapping.containsKey(requestURL)){
             response.getWriter().write("404 not Found!");
             return;
         }
 
         // 通过反射对controller方法进行调用
-        Method method = (Method) this.ioc.get(requestURL);
+        Method method = (Method) this.handlerMapping.get(requestURL);
         Map<String, String[]> parameterMap = request.getParameterMap();
-        Object obj = this.ioc.get(method.getDeclaringClass().getName());
-        Object[] params = {request, response, parameterMap.get("name")[0]};// 第一版简单写 暂时写死
-        method.invoke(obj, params);
+        Object bean = this.ioc.get(toLowerFirstCase(method.getDeclaringClass().getSimpleName()));
+        Object[] params = {request, response, parameterMap.get("name")[0]};// 第二版简单写 暂时写死
+        method.invoke(bean, params);
     }
 
     @Override
@@ -208,7 +208,7 @@ public class PQLDispatcherServlet extends HttpServlet {
                 String beanName = autowired.value().trim();
                 if("".equals(beanName)){
                     // 没有指定beanName 使用字段类名注入
-                    String name = field.getType().getName();
+                    beanName = field.getType().getName();
                 }
                 field.setAccessible(true);
                 try{
@@ -245,7 +245,7 @@ public class PQLDispatcherServlet extends HttpServlet {
 
             // 默认获取所有public类型的方法
             for (Method method : clazz.getMethods()) {
-                if(!!method.isAnnotationPresent(PQLRequestMapping.class)){
+                if(!method.isAnnotationPresent(PQLRequestMapping.class)){
                     continue;
                 }
 
